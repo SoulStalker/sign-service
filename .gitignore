@@ -1,5 +1,4 @@
 .env
-config/prod.yml
 /bin/
 /dist/
 *.log
@@ -36,8 +35,6 @@ Thumbs.db
 # Config (содержит секреты!)
 config/prod.yml
 config/dev.yml
-config/*.yml
-!config/*.yml.example
 
 # Data directories
 inbox/*.xml
