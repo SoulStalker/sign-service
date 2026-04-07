@@ -1,0 +1,69 @@
+.env
+config/prod.yml
+/bin/
+/dist/
+*.log
+*.xml
+# Binaries
+bin/
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+upd_system
+
+# Test binary and coverage
+*.test
+*.out
+coverage.html
+coverage.out
+
+# Go workspace file
+go.work
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Config (содержит секреты!)
+config/prod.yml
+config/dev.yml
+config/*.yml
+!config/*.yml.example
+
+# Data directories
+inbox/*.xml
+generated/*.xml
+backup/
+
+# Logs
+*.log
+logs/
+
+# Dependencies
+vendor/
+
+# Docker
+.env
+
+# Временные файлы
+tmp/
+temp/
+*.tmp
+
+# Database
+*.db
+*.sqlite
+
+# Secrets
+*.key
+*.pem
+*.crt
