@@ -1,0 +1,47 @@
+syntax = "proto3";
+
+package signer;
+
+option go_package = "github.com/SoulStalker/sign-service/gen/signer;signer";
+
+service Signer {
+  rpc Sign             (SignRequest)   returns (SignResponse);
+  rpc Verify           (VerifyRequest) returns (VerifyResponse);
+  rpc ListCertificates (Empty)         returns (CertListResponse);
+}
+
+// --- Запросы / ответы ---
+
+message SignRequest {
+  bytes  payload    = 1; // сырые байты для подписи
+  string thumbprint = 2; // SHA1 hex сертификата, без учёта регистра
+  string caller_id  = 3; // идентификатор вызывающей стороны, напр. "edo-client"
+}
+
+message SignResponse {
+  bytes signature = 1; // PKCS#7 / CMS подпись
+}
+
+message VerifyRequest {
+  bytes  payload    = 1;
+  bytes  signature  = 2;
+  string thumbprint = 3;
+}
+
+message VerifyResponse {
+  bool valid = 1;
+}
+
+message Empty {}
+
+message CertInfo {
+  string thumbprint = 1;
+  string subject    = 2;
+  string issuer     = 3;
+  string not_before = 4; // RFC3339
+  string not_after  = 5; // RFC3339
+}
+
+message CertListResponse {
+  repeated CertInfo certificates = 1;
+}
