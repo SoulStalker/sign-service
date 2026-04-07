@@ -65,9 +65,9 @@ Write-Host "Запускаю protoc..."
 
 protoc `
     --proto_path="$ProtoDir" `
-    --go_out="$RepoRoot" `
+    --go_out="$RepoRoot\gen" `
     --go_opt=paths=source_relative `
-    --go-grpc_out="$RepoRoot" `
+    --go-grpc_out="$RepoRoot\gen" `
     --go-grpc_opt=paths=source_relative `
     "$ProtoFile"
 
