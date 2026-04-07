@@ -121,18 +121,12 @@ Certificates are not configured in the config file — all signing uses certific
 - [ ] **2.10** Write `scripts/install-service.ps1`
   — NSSM install + set AppDirectory + start
 
-- [x] **2.10.1** Removed TLS config fields; config now has only grpc_addr, log_level, audit_log. Created `config/example.yml`.
-
-- [x] **2.10.2** Fixed encoding error in `scripts/generate.ps1`; all log output is now in English.
-
-
-  
 
 - [ ] **2.11** Verify end-to-end on Windows:
   ```powershell
   .\sign-service.exe --config config/prod.yml
   # from another terminal — grpcurl or test client:
-  grpcurl -insecure localhost:50051 signer.Signer/ListCertificates
+  grpcurl -plaintext localhost:50051 signer.Signer/ListCertificates
   ```
 
 ## Roadmap: Phase 3 — edo-client migration

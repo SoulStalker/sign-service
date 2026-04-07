@@ -8,7 +8,7 @@ Windows-only gRPC-сервис криптографической подписи
 ## Архитектура
 
 ```
-cmd/sign-service/          Точка входа: конфиг → mTLS → gRPC-сервер
+cmd/sign-service/          Точка входа: конфиг → gRPC-сервер
 internal/config/           YAML-конфиг (cleanenv)
 internal/sign/             Syscall-обёртки crypt32.dll (только Windows)
 internal/server/           SignerServer: реализует gRPC-интерфейс, пишет аудит-лог
@@ -21,6 +21,20 @@ scripts/install-service.ps1  Установка как Windows-служба че
 ## Сборка и запуск
 
 > Требуется Windows — `internal/sign` использует `crypt32.dll`.
+
+### Зависимости для генерации stubs
+
+Перед первым запуском `.\scripts\generate.ps1` установите `protoc`:
+
+```powershell
+# через winget
+winget install Google.Protobuf
+
+# или через Chocolatey
+choco install protoc
+```
+
+Go-плагины (`protoc-gen-go`, `protoc-gen-go-grpc`) скрипт установит автоматически.
 
 ```powershell
 # Генерация gRPC-стабов (после любого изменения .proto)
@@ -38,34 +52,15 @@ go build -o sign-service.exe .\cmd\sign-service
 Конфиг читается из YAML-файла (`--config`, default: `config\prod.yml`).
 Все поля можно переопределить переменными среды.
 
-| Поле           | ENV             | Default            | Описание                              |
-|----------------|-----------------|--------------------|---------------------------------------|
-| `grpc_addr`    | `GRPC_ADDR`     | `0.0.0.0:50051`    | Адрес для прослушивания               |
-| `tls_cert_file`| `TLS_CERT_FILE` | **обязательный**   | Серверный сертификат (PEM)            |
-| `tls_key_file` | `TLS_KEY_FILE`  | **обязательный**   | Приватный ключ сервера (PEM)          |
-| `tls_ca_file`  | `TLS_CA_FILE`   | **обязательный**   | CA-сертификат для проверки клиентов   |
-| `log_level`    | `LOG_LEVEL`     | `info`             | `debug` / `info` / `warn`            |
-| `audit_log`    | `AUDIT_LOG`     | `audit.jsonl`      | Путь к аудит-логу (JSONL)             |
+| Поле        | ENV        | Default         | Описание                   |
+|-------------|------------|-----------------|----------------------------|
+| `grpc_addr` | `GRPC_ADDR`| `0.0.0.0:50051` | Адрес для прослушивания    |
+| `log_level` | `LOG_LEVEL`| `info`          | `debug` / `info` / `warn` |
+| `audit_log` | `AUDIT_LOG`| `audit.jsonl`   | Путь к аудит-логу (JSONL)  |
 
-Пример `config/prod.yml`:
+Сертификаты в конфиге не указываются — сервис работает с сертификатами, установленными в Windows Certificate Store, через Windows API (`crypt32.dll`).
 
-```yaml
-grpc_addr: 0.0.0.0:50051
-tls_cert_file: C:\sign-service\certs\server.crt
-tls_key_file:  C:\sign-service\certs\server.key
-tls_ca_file:   C:\sign-service\certs\ca.crt
-log_level: info
-audit_log: C:\sign-service\audit.jsonl
-```
-
-## mTLS
-
-Сервер требует клиентский сертификат, подписанный тем же CA.
-
-Для локальной разработки — сгенерируйте самоподписанный CA и сертификаты:
-```powershell
-.\scripts\gen-dev-certs.ps1  # будет добавлен в Phase 3
-```
+Пример конфига: [`config/example.yml`](config/example.yml).
 
 ## gRPC-контракт
 

@@ -10,6 +10,7 @@ import (
 	"syscall"
 
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/reflection"
 
 	pb "github.com/SoulStalker/sign-service/gen/signer"
 	"github.com/SoulStalker/sign-service/internal/config"
@@ -40,6 +41,7 @@ func main() {
 	// --- gRPC-сервер ---
 	grpcSrv := grpc.NewServer()
 	pb.RegisterSignerServer(grpcSrv, server.New(newSigner(), cfg.AuditLog, log))
+	reflection.Register(grpcSrv)
 
 	lis, err := net.Listen("tcp", cfg.GRPCAddr)
 	if err != nil {
