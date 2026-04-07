@@ -12,9 +12,18 @@ import (
 	"google.golang.org/grpc/status"
 )
 
-// Signer — интерфейс подписи. Позволяет подменять реализацию в тестах.
+// CertInfo — метаданные сертификата, не зависящие от платформы.
+type CertInfo struct {
+	Thumbprint string
+	Subject    string
+	NotBefore  string // RFC3339
+	NotAfter   string // RFC3339
+}
+
+// Signer — интерфейс подписи и инспекции сертификатов.
 type Signer interface {
 	Sign(payload []byte, thumbprint string) ([]byte, error)
+	ListCerts() ([]CertInfo, error)
 }
 
 // SignerServer реализует gRPC-интерфейс signer.SignerServer.
@@ -83,5 +92,20 @@ func (s *SignerServer) Verify(_ context.Context, _ *pb.VerifyRequest) (*pb.Verif
 }
 
 func (s *SignerServer) ListCertificates(_ context.Context, _ *pb.Empty) (*pb.CertListResponse, error) {
-	return nil, status.Error(codes.Unimplemented, "ListCertificates не реализован")
+	certs, err := s.signer.ListCerts()
+	if err != nil {
+		s.log.Error("не удалось получить список сертификатов", "err", err)
+		return nil, status.Errorf(codes.Internal, "хранилище недоступно: %v", err)
+	}
+
+	infos := make([]*pb.CertInfo, 0, len(certs))
+	for _, c := range certs {
+		infos = append(infos, &pb.CertInfo{
+			Thumbprint: c.Thumbprint,
+			Subject:    c.Subject,
+			NotBefore:  c.NotBefore,
+			NotAfter:   c.NotAfter,
+		})
+	}
+	return &pb.CertListResponse{Certificates: infos}, nil
 }

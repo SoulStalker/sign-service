@@ -214,6 +214,42 @@ func SignJSON(jsonData []byte, thumbprint string) (string, error) {
 	return base64.StdEncoding.EncodeToString(signedBlob[:signedBlobSize]), nil
 }
 
+// ListCerts возвращает все сертификаты из хранилища CurrentUser\My.
+func ListCerts() ([]*x509.Certificate, error) {
+	storeName, err := windows.UTF16PtrFromString("MY")
+	if err != nil {
+		return nil, err
+	}
+	hStore, err := windows.CertOpenStore(
+		CERT_STORE_PROV_SYSTEM,
+		0,
+		0,
+		CERT_SYSTEM_STORE_CURRENT_USER,
+		uintptr(unsafe.Pointer(storeName)),
+	)
+	if err != nil {
+		return nil, fmt.Errorf("не удалось открыть хранилище: %w", err)
+	}
+	defer windows.CertCloseStore(hStore, 0)
+
+	var certs []*x509.Certificate
+	var prev *windows.CertContext
+	for {
+		// CertEnumCertificatesInStore автоматически освобождает prev-контекст
+		ctx, _ := windows.CertEnumCertificatesInStore(hStore, prev)
+		if ctx == nil {
+			break
+		}
+		der := (*[1 << 20]byte)(unsafe.Pointer(ctx.EncodedCert))[:ctx.Length:ctx.Length]
+		cert, err := x509.ParseCertificate(der)
+		if err == nil {
+			certs = append(certs, cert)
+		}
+		prev = ctx
+	}
+	return certs, nil
+}
+
 func removeSpacesAndLower(thumbprintHex string) string {
 	runesHex := []rune{}
 	for _, v := range thumbprintHex {

@@ -15,6 +15,10 @@ func (stubSigner) Sign(_ []byte, _ string) ([]byte, error) {
 	return nil, errors.New("подпись поддерживается только на Windows")
 }
 
+func (stubSigner) ListCerts() ([]server.CertInfo, error) {
+	return nil, errors.New("ListCerts поддерживается только на Windows")
+}
+
 func newSigner() server.Signer {
 	return stubSigner{}
 }

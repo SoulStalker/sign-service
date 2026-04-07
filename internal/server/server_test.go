@@ -27,6 +27,10 @@ func (s *stubSigner) Sign(_ []byte, _ string) ([]byte, error) {
 	return s.sig, s.err
 }
 
+func (s *stubSigner) ListCerts() ([]CertInfo, error) {
+	return nil, nil
+}
+
 // helpers
 
 func newTestServer(t *testing.T, signer Signer) (*SignerServer, string) {
