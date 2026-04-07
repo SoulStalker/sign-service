@@ -1,67 +1,67 @@
 #Requires -Version 5.1
 <#
 .SYNOPSIS
-    Генерирует gRPC-стабы из proto/signer/signer.proto в gen/signer/.
+    Generates gRPC stubs from proto/signer/signer.proto into gen/signer/.
 .DESCRIPTION
-    - Проверяет наличие protoc, protoc-gen-go, protoc-gen-go-grpc.
-    - Устанавливает Go-плагины через `go install`, если они отсутствуют.
-    - Запускает protoc с нужными флагами.
-    - Завершается с ненулевым кодом при любой ошибке.
+    - Checks for protoc, protoc-gen-go, protoc-gen-go-grpc.
+    - Installs Go plugins via `go install` if missing.
+    - Runs protoc with required flags.
+    - Exits with non-zero code on any error.
 #>
 
 Set-StrictMode -Version Latest
 $ErrorActionPreference = 'Stop'
 
-# --- Константы ---
+# --- Constants ---
 $RepoRoot  = Split-Path -Parent $PSScriptRoot
 $ProtoFile = "$RepoRoot\proto\signer\signer.proto"
 $ProtoDir  = "$RepoRoot\proto"
 $OutDir    = "$RepoRoot\gen\signer"
 
-# --- Вспомогательные функции ---
+# --- Helper functions ---
 function Assert-Command {
     param([string]$Name, [string]$InstallHint)
     if (-not (Get-Command $Name -ErrorAction SilentlyContinue)) {
-        Write-Error "Команда '$Name' не найдена. $InstallHint"
+        Write-Error "Command '$Name' not found. $InstallHint"
     }
 }
 
 function Install-GoTool {
     param([string]$Package, [string]$Binary)
     if (-not (Get-Command $Binary -ErrorAction SilentlyContinue)) {
-        Write-Host "Устанавливаю $Binary..."
+        Write-Host "Installing $Binary..."
         go install $Package
-        # Обновляем PATH для текущей сессии
+        # Update PATH for current session
         $gobin = go env GOPATH
         $env:PATH = "$gobin\bin;$env:PATH"
         if (-not (Get-Command $Binary -ErrorAction SilentlyContinue)) {
-            Write-Error "Не удалось найти '$Binary' после установки. Убедитесь, что GOPATH\bin в PATH."
+            Write-Error "Could not find '$Binary' after installation. Make sure GOPATH\bin is in PATH."
         }
-        Write-Host "$Binary успешно установлен."
+        Write-Host "$Binary installed successfully."
     } else {
-        Write-Host "$Binary уже установлен."
+        Write-Host "$Binary is already installed."
     }
 }
 
-# --- Проверки ---
+# --- Prerequisites ---
 Assert-Command 'protoc' `
-    'Установите Protocol Buffers compiler: https://github.com/protocolbuffers/protobuf/releases'
+    'Install Protocol Buffers compiler: https://github.com/protocolbuffers/protobuf/releases'
 
 Assert-Command 'go' `
-    'Установите Go: https://golang.org/dl/'
+    'Install Go: https://golang.org/dl/'
 
-# --- Go-плагины ---
+# --- Go plugins ---
 Install-GoTool 'google.golang.org/protobuf/cmd/protoc-gen-go@latest'      'protoc-gen-go'
 Install-GoTool 'google.golang.org/grpc/cmd/protoc-gen-go-grpc@latest'     'protoc-gen-go-grpc'
 
-# --- Создаём выходную директорию ---
+# --- Create output directory ---
 if (-not (Test-Path $OutDir)) {
     New-Item -ItemType Directory -Path $OutDir | Out-Null
-    Write-Host "Создана директория: $OutDir"
+    Write-Host "Created directory: $OutDir"
 }
 
-# --- Генерация ---
-Write-Host "Запускаю protoc..."
+# --- Generate ---
+Write-Host "Running protoc..."
 
 protoc `
     --proto_path="$ProtoDir" `
@@ -72,7 +72,7 @@ protoc `
     "$ProtoFile"
 
 if ($LASTEXITCODE -ne 0) {
-    Write-Error "protoc завершился с ошибкой (код $LASTEXITCODE)."
+    Write-Error "protoc failed with exit code $LASTEXITCODE."
 }
 
-Write-Host "Генерация завершена. Файлы в: $OutDir"
+Write-Host "Generation complete. Files written to: $OutDir"

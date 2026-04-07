@@ -1,0 +1,3 @@
+grpc_addr: "0.0.0.0:50051"
+log_level: "info"
+audit_log: "audit.jsonl"

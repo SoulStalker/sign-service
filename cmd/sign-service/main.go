@@ -2,8 +2,6 @@ package main
 
 import (
 	"context"
-	"crypto/tls"
-	"crypto/x509"
 	"flag"
 	"log/slog"
 	"net"
@@ -12,7 +10,6 @@ import (
 	"syscall"
 
 	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials"
 
 	pb "github.com/SoulStalker/sign-service/gen/signer"
 	"github.com/SoulStalker/sign-service/internal/config"
@@ -40,15 +37,8 @@ func main() {
 	}
 	log = slog.New(slog.NewJSONHandler(os.Stdout, &slog.HandlerOptions{Level: level}))
 
-	// --- mTLS ---
-	creds, err := buildTLS(cfg)
-	if err != nil {
-		log.Error("ошибка настройки mTLS", "err", err)
-		os.Exit(1)
-	}
-
 	// --- gRPC-сервер ---
-	grpcSrv := grpc.NewServer(grpc.Creds(creds))
+	grpcSrv := grpc.NewServer()
 	pb.RegisterSignerServer(grpcSrv, server.New(newSigner(), cfg.AuditLog, log))
 
 	lis, err := net.Listen("tcp", cfg.GRPCAddr)
@@ -72,29 +62,4 @@ func main() {
 	log.Info("получен сигнал завершения, останавливаем сервис...")
 	grpcSrv.GracefulStop()
 	log.Info("сервис остановлен")
-}
-
-// buildTLS собирает mTLS-конфигурацию: серверный сертификат + проверка клиентского CA.
-func buildTLS(cfg *config.Config) (credentials.TransportCredentials, error) {
-	cert, err := tls.LoadX509KeyPair(cfg.TLSCertFile, cfg.TLSKeyFile)
-	if err != nil {
-		return nil, err
-	}
-
-	caPEM, err := os.ReadFile(cfg.TLSCAFile)
-	if err != nil {
-		return nil, err
-	}
-	caPool := x509.NewCertPool()
-	if !caPool.AppendCertsFromPEM(caPEM) {
-		return nil, err
-	}
-
-	tlsCfg := &tls.Config{
-		Certificates: []tls.Certificate{cert},
-		ClientAuth:   tls.RequireAndVerifyClientCert,
-		ClientCAs:    caPool,
-		MinVersion:   tls.VersionTLS12,
-	}
-	return credentials.NewTLS(tlsCfg), nil
 }

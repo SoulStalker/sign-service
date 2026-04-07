@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## What This Is
 
-A **Windows-only gRPC service** that exposes cryptographic signing via Windows certificate store (ГОСТ сертификаты, crypt32.dll) over a gRPC interface with mTLS.
+A **Windows-only gRPC service** that exposes cryptographic signing via Windows certificate store (ГОСТ сертификаты, crypt32.dll) over a gRPC interface.
 
 Designed to be reused by multiple clients: `edo-client`, `chestnyznak-client`, and future services.
 Each caller passes `thumbprint` per request — the service supports multiple certificates simultaneously.
@@ -60,17 +60,6 @@ message SignRequest {
 Full schema: `proto/signer/signer.proto`.
 After any change run `.\scripts\generate.ps1` and commit `gen/` together with `.proto`.
 
-## mTLS
-
-Both server and client must present certificates signed by the same CA.
-
-Config fields:
-- `tls_cert_file` — server certificate (PEM)
-- `tls_key_file`  — server private key (PEM)
-- `tls_ca_file`   — CA certificate for client verification (PEM)
-
-For local dev without PKI: generate self-signed CA + certs via `scripts/gen-dev-certs.ps1` (to be added).
-
 ## Windows-Only Constraint
 
 `internal/sign` uses `golang.org/x/sys/windows`. Cannot compile on Linux/macOS.
@@ -78,14 +67,13 @@ All other packages are cross-platform — server logic, proto, config.
 
 ## Configuration Fields
 
-| Field          | Purpose                                      |
-|----------------|----------------------------------------------|
-| `grpc_addr`    | Listen address, e.g. `0.0.0.0:50051`        |
-| `tls_cert_file`| Path to server TLS certificate (PEM)         |
-| `tls_key_file` | Path to server TLS private key (PEM)         |
-| `tls_ca_file`  | Path to CA cert for client auth (PEM)        |
-| `log_level`    | `debug` / `info` / `warn`                   |
-| `audit_log`    | Path to audit JSONL file                     |
+| Field       | Env var    | Default          | Purpose                        |
+|-------------|------------|------------------|--------------------------------|
+| `grpc_addr` | `GRPC_ADDR`| `0.0.0.0:50051`  | Listen address                 |
+| `log_level` | `LOG_LEVEL`| `info`           | `debug` / `info` / `warn`     |
+| `audit_log` | `AUDIT_LOG`| `audit.jsonl`    | Path to audit JSONL file       |
+
+Certificates are not configured in the config file — all signing uses certificates installed in the Windows certificate store, accessed via Windows API (crypt32.dll).
 
 ## Code Notes
 
@@ -120,11 +108,11 @@ All other packages are cross-platform — server logic, proto, config.
   — write audit log entry on every Sign call (structured JSON, append to file)
   — return gRPC status codes: `codes.InvalidArgument` for bad thumbprint, `codes.Internal` for sign failure
 
-- [ ] **2.7** Implement `internal/config/config.go`
-  — fields: grpc_addr, tls_cert_file, tls_key_file, tls_ca_file, log_level, audit_log
+- [x] **2.7** Implement `internal/config/config.go`
+  — fields: grpc_addr, log_level, audit_log (no TLS fields — certs via Windows API)
 
-- [ ] **2.8** Implement `cmd/sign-service/main.go`
-  — load config → build mTLS credentials → create gRPC server → register SignerServer → serve
+- [x] **2.8** Implement `cmd/sign-service/main.go`
+  — load config → create gRPC server → register SignerServer → serve
   — graceful shutdown on SIGINT/SIGTERM (context + grpc.GracefulStop)
 
 - [ ] **2.9** Write `internal/server/server_test.go`
@@ -132,6 +120,13 @@ All other packages are cross-platform — server logic, proto, config.
 
 - [ ] **2.10** Write `scripts/install-service.ps1`
   — NSSM install + set AppDirectory + start
+
+- [x] **2.10.1** Removed TLS config fields; config now has only grpc_addr, log_level, audit_log. Created `config/example.yml`.
+
+- [x] **2.10.2** Fixed encoding error in `scripts/generate.ps1`; all log output is now in English.
+
+
+  
 
 - [ ] **2.11** Verify end-to-end on Windows:
   ```powershell
