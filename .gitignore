@@ -64,3 +64,6 @@ temp/
 *.key
 *.pem
 *.crt
+
+# бинарники сборки
+/sign-service
